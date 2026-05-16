@@ -59,9 +59,11 @@ def save_progress(data: Dict[str, Any]) -> None:
 
 
 def save_node(node_id: str, node_data: Dict[str, Any]) -> None:
-    """Updates or inserts a node in learning_progress.json."""
+    """Updates or inserts a node in learning_progress.json.
+    Preserves any optional blocks (e.g. 'remediation') that live outside the canonical schema."""
     progress = load_progress()
-    progress["nodes"][node_id] = {
+    existing = progress["nodes"].get(node_id, {})
+    record: Dict[str, Any] = {
         "node_id": node_id,
         "title": node_data.get("title", "Unknown Concept"),
         "prerequisites": node_data.get("prerequisites", []),
@@ -71,9 +73,47 @@ def save_node(node_id: str, node_data: Dict[str, Any]) -> None:
         "attempts": node_data.get("attempts", 0),
         "success_rate": node_data.get("success_rate", 0.0),
         "active_interest_used": node_data.get("active_interest_used", None),
-        "last_updated": datetime.utcnow().isoformat() + "Z"
+        "last_updated": datetime.utcnow().isoformat() + "Z",
     }
+    if "remediation" in existing:
+        record["remediation"] = existing["remediation"]
+    progress["nodes"][node_id] = record
     save_progress(progress)
+
+
+def save_remediation(node_id: str, remediation_data: Dict[str, Any]) -> None:
+    """Writes the optional remediation block into a node record without touching the 9 canonical fields."""
+    progress = load_progress()
+    if node_id in progress["nodes"]:
+        progress["nodes"][node_id]["remediation"] = remediation_data
+        save_progress(progress)
+
+
+def clear_remediation(node_id: str) -> None:
+    """Removes the remediation block from a node record."""
+    progress = load_progress()
+    if node_id in progress["nodes"]:
+        progress["nodes"][node_id].pop("remediation", None)
+        save_progress(progress)
+
+
+def unlock_dependents(mastered_node_id: str) -> List[str]:
+    """Unlocks any locked nodes whose prerequisites are all now mastered."""
+    progress = load_progress()
+    newly_unlocked = []
+    for nid, node in progress["nodes"].items():
+        if node["status"] != "locked":
+            continue
+        prereqs = node.get("prerequisites", [])
+        if mastered_node_id not in prereqs:
+            continue
+        if all(progress["nodes"].get(p, {}).get("status") == "mastered" for p in prereqs):
+            node["status"] = "unlocked"
+            node["last_updated"] = datetime.utcnow().isoformat() + "Z"
+            newly_unlocked.append(nid)
+    if newly_unlocked:
+        save_progress(progress)
+    return newly_unlocked
 
 
 def append_turn(role: str, content: str) -> None:

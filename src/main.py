@@ -4,8 +4,8 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import initialize_storage, load_profile, save_profile, save_node
-from agents import generate_curriculum
+from utils import initialize_storage, load_profile, save_profile, save_node, load_progress, unlock_dependents, save_remediation
+from agents import generate_curriculum, generate_lesson, evaluate_answers, generate_remediation
 
 GENERATIONAL_OPTIONS = [
     "Gen Z (born 1997–2012)",
@@ -93,7 +93,122 @@ def run_curriculum_generation() -> None:
         print(f"  [{node['status']:8}] {node['node_id']} — {node['title']} (prereqs: {prereqs})")
 
 
+def run_remediation(node_id: str, node_data: dict, missed_topic: str, interest_used: str) -> None:
+    profile = load_profile()
+    print(f"\n--- Micro-Remediation: {missed_topic} ---")
+    print("Generating focused deep-dive — please wait...")
+    result = generate_remediation(profile, node_data, missed_topic, interest_used)
+
+    print(f"\n{result['mini_lesson']}")
+    print(f"\nFollow-up question: {result['follow_up_question']}")
+    answer = input("\nYour answer: ").strip()
+
+    save_remediation(node_id, {
+        "topic": missed_topic,
+        "mini_lesson": result["mini_lesson"],
+        "follow_up_question": result["follow_up_question"],
+        "user_answer": answer,
+        "status": "completed",
+        "attempts": 1,
+    })
+    print("\nLogged. Your mastered status is unchanged — that gap is now on record for future review.")
+
+
+def run_lesson(node_id: str) -> None:
+    profile = load_profile()
+    progress = load_progress()
+
+    node_data = progress["nodes"].get(node_id)
+    if not node_data:
+        print(f"Node '{node_id}' not found in learning_progress.json.")
+        return
+    if node_data["status"] != "unlocked":
+        print(f"Node '{node_id}' is {node_data['status']} — prerequisites not yet met.")
+        return
+
+    print(f"\nGenerating lesson for: {node_data['title']} — please wait...")
+    result = generate_lesson(profile, node_data)
+
+    print("\n" + "=" * 60)
+    print(f"  LESSON: {node_data['title']}")
+    print("=" * 60)
+    print(result["lesson"])
+
+    questions = result["questions"]
+    print("\n--- Review Questions ---")
+    for i, q in enumerate(questions, 1):
+        print(f"  {i}. {q}")
+    print("-" * 60)
+
+    print("\nAnswer each question below. Press Enter to submit.\n")
+    user_answers = []
+    for i, q in enumerate(questions, 1):
+        print(f"  Q{i}: {q}")
+        answer = input("  Your answer: ").strip()
+        user_answers.append(answer)
+        print()
+
+    print("Evaluating your answers — please wait...")
+    evaluation = evaluate_answers(profile, node_data, questions, user_answers)
+
+    print("\n--- Coach Feedback ---")
+    print(evaluation["feedback"])
+
+    node_data["active_interest_used"] = result.get("interest_used")
+    node_data["attempts"] = node_data.get("attempts", 0) + 1
+
+    if evaluation["passed"]:
+        node_data["status"] = "mastered"
+        node_data["consecutive_failures"] = 0
+        save_node(node_id, node_data)
+        newly_unlocked = unlock_dependents(node_id)
+        print(f"\nPASSED — '{node_data['title']}' marked as mastered.")
+        if newly_unlocked:
+            for nid in newly_unlocked:
+                next_title = load_progress()["nodes"][nid]["title"]
+                print(f"  Next lesson unlocked: {next_title} ({nid})")
+        else:
+            print("  No further nodes to unlock.")
+
+        missed_topic = evaluation.get("missed_topic")
+        if missed_topic:
+            print(f"\n  One gap spotted: '{missed_topic}'.")
+            choice = input("  Take a quick 2-minute deep-dive on that? (y/n): ").strip().lower()
+            if choice == "y":
+                run_remediation(node_id, node_data, missed_topic, result.get("interest_used", ""))
+            else:
+                save_remediation(node_id, {
+                    "topic": missed_topic,
+                    "status": "skipped",
+                    "attempts": 0,
+                })
+                print("  Skipped — logged for future reference.")
+    else:
+        node_data["consecutive_failures"] = node_data.get("consecutive_failures", 0) + 1
+        save_node(node_id, node_data)
+        print(f"\nNot quite yet — node stays unlocked. Give it another shot!")
+        print(f"  Attempts: {node_data['attempts']}  |  Consecutive misses: {node_data['consecutive_failures']}")
+
+
 if __name__ == "__main__":
     initialize_storage()
-    run_onboarding()
-    run_curriculum_generation()
+
+    print("\n=== AI Tutor — Dev Menu ===")
+    print("  1. Onboarding + Curriculum Generation")
+    print("  2. Run Lesson  (first unlocked node)")
+    choice = input("Select option: ").strip()
+
+    if choice == "1":
+        run_onboarding()
+        run_curriculum_generation()
+    elif choice == "2":
+        progress = load_progress()
+        unlocked = [
+            nid for nid, n in progress["nodes"].items() if n["status"] == "unlocked"
+        ]
+        if not unlocked:
+            print("No unlocked nodes found. Run option 1 first.")
+        else:
+            run_lesson(unlocked[0])
+    else:
+        print("Invalid choice.")
