@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# Claude Code internal tooling
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
