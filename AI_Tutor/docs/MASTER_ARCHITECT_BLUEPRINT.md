@@ -103,3 +103,23 @@ Regardless of implementation medium (CLI, Web UI, Mobile), the system must colle
 ### 6.1 Migration to Vector-Driven RAG (Long-Term Memory)
 - **Target State:** Implement a localized vector database (e.g., ChromaDB or LanceDB) to handle "Pedagogical Memory Retrieval."
 - **Mechanism:** Convert historical learning logs into vector embeddings. When friction occurs, use semantic similarity search to retrieve successful past instructional strategies, maintaining structural efficiency without blowing past context windows.
+
+---
+
+## 7. Software Architecture & Coding Standards
+
+To maintain clean, maintainable code and prevent file bloat during AI-assisted generation, the codebase must strictly adhere to a modular, decoupled architecture.
+
+### 7.1 Module Isolation Rules
+*   **No API Leakage:** All LLM API interaction (initializing the Google GenAI SDK, setting system instructions, managing parameters) must live strictly inside `src/agents.py`. No other file is permitted to make direct API calls.
+*   **No Raw Storage Calls:** Reading and writing `.json` files must live strictly inside `src/utils.py`. The rest of the application must interact with data via helper functions (e.g., `load_profile()`, `save_progress()`).
+*   **No State in Main:** `src/main.py` is exclusively the operational runtime loop (the conductor). It coordinates data from `utils.py`, passes it to `agents.py`, and orchestrates the user interface.
+
+### 7.2 Directory Reference Guide for AI Agents
+When generating or modifying code, adhere strictly to this functional allocation mapping:
+
+| File Path | Explicit Responsibility | Forbidden Content |
+| :--- | :--- | :--- |
+| `src/agents.py` | Initializing LLM clients; executing prompts; handling retry logic. | Direct file saving (`open()`, `json.dump()`); terminal menus. |
+| `src/utils.py` | JSON loading/saving; data schema validation; system paths. | Importing LLM SDKs; running prompts; handling runtime logic. |
+| `src/main.py` | Managing the state loop; print statements; routing the menu logic. | Complex JSON mutations; direct API handling. |
