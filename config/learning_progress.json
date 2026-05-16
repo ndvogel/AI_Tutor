@@ -5,13 +5,21 @@
       "node_id": "introduction_to_apis",
       "title": "Introduction to APIs",
       "prerequisites": [],
-      "status": "unlocked",
+      "status": "mastered",
       "friction_cycle_count": 0,
       "consecutive_failures": 0,
-      "attempts": 0,
+      "attempts": 4,
       "success_rate": 0.0,
-      "active_interest_used": null,
-      "last_updated": "2026-05-16T21:39:37.161334Z"
+      "active_interest_used": "cooking",
+      "last_updated": "2026-05-16T22:33:19.049447Z",
+      "remediation": {
+        "topic": "API versioning",
+        "mini_lesson": "Think of your favorite restaurant's menu as an API, detailing what dishes (data/functions) you can order. Just like a chef might evolve a popular recipe\u2014perhaps changing ingredients or preparation methods\u2014API developers often modify their services over time. API versioning is like the restaurant offering 'Menu v1.0' and introducing a 'Menu v2.0' when significant changes occur. This ensures that customers (client applications) who learned to order from v1.0 don't suddenly receive a different dish than expected, preventing 'broken' experiences. It allows older clients to continue functioning with the previous recipe while new clients can use the updated version, providing a smooth transition and predictable service for everyone.",
+        "follow_up_question": "If a food delivery app was built to order a specific sandwich from 'Restaurant API v1.0' and the restaurant then made a significant change to that sandwich's ingredients without releasing a 'v2.0' API, what potential problem would the delivery app and its users face?",
+        "user_answer": "APIs use versioning so old clients keep working while new ones adopt the new contract.",
+        "status": "completed",
+        "attempts": 1
+      }
     },
     "http_fundamentals": {
       "node_id": "http_fundamentals",
@@ -19,13 +27,13 @@
       "prerequisites": [
         "introduction_to_apis"
       ],
-      "status": "locked",
+      "status": "mastered",
       "friction_cycle_count": 0,
       "consecutive_failures": 0,
-      "attempts": 0,
+      "attempts": 1,
       "success_rate": 0.0,
-      "active_interest_used": null,
-      "last_updated": "2026-05-16T21:39:37.176769Z"
+      "active_interest_used": "cooking",
+      "last_updated": "2026-05-16T22:09:00.974637Z"
     },
     "understanding_web_apis": {
       "node_id": "understanding_web_apis",
@@ -33,13 +41,13 @@
       "prerequisites": [
         "http_fundamentals"
       ],
-      "status": "locked",
+      "status": "unlocked",
       "friction_cycle_count": 0,
       "consecutive_failures": 0,
       "attempts": 0,
       "success_rate": 0.0,
       "active_interest_used": null,
-      "last_updated": "2026-05-16T21:39:37.191602Z"
+      "last_updated": "2026-05-16T22:09:01.018453Z"
     },
     "restful_api_principles": {
       "node_id": "restful_api_principles",

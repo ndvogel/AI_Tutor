@@ -231,3 +231,14 @@ This ensures the lesson always delivers rather than stalling, while surfacing th
   "no_analogy_nodes": []
 }
 ```
+## Appendix C: Architectural Decision Records (ADR)
+
+### ADR-001: Dynamic Remediation and User Agency
+* **Date:** May 16, 2026
+* **Status:** Approved (Pre-Implementation Stress Test Passed)
+* **Context:** The core assessment engine defaults to a 2-out-of-3 threshold for node mastery. However, a rigid binary pass/fail mechanics prevents deep reinforcement of nuanced weak spots and limits user learning choices.
+* **Decision:** Implement an isolated, branching "Micro-Remediation Loop". If a student meets the pass threshold but misses a sub-topic, the system triggers an optional branching choice allowing the user to initiate a single-topic deep dive.
+* **Guardrails & Constraints:**
+  1. **Data Isolation:** Remediation state must live inside a temporary, optional `"remediation": {}` tracking block within the existing node record. It must NOT alter the canonical 9-field schema framework.
+  2. **Circuit Breaker:** Max 1 attempt for micro-remediation modules to prevent recursive execution loops.
+  3. **No Retroactive Locks:** Failing a micro-remediation module cannot revoke a previously granted `mastered` status or re-lock downstream nodes.
