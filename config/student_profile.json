@@ -1,12 +1,12 @@
 {
   "student_name": "Nathan",
-  "target_subject": "Building AI agents and tools",
-  "generational_bracket": "Gen X (born 1965\u20131980)",
+  "target_subject": "Web APIs",
+  "generational_bracket": "Millennial (born 1981\u20131996)",
   "core_interests": [
-    "Evangelical Christianity",
-    "Film and Cinema",
-    "Basketball"
+    "basketball",
+    "cooking",
+    "film"
   ],
-  "preferred_delivery": "Example-Driven",
+  "preferred_delivery": "Interactive Dialog",
   "custom_mental_models": []
 }

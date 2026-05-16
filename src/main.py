@@ -4,7 +4,8 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import initialize_storage, load_profile, save_profile
+from utils import initialize_storage, load_profile, save_profile, save_node
+from agents import generate_curriculum
 
 GENERATIONAL_OPTIONS = [
     "Gen Z (born 1997–2012)",
@@ -80,6 +81,19 @@ def run_onboarding() -> None:
     print(f"  Interests : {', '.join(interests)}")
 
 
+def run_curriculum_generation() -> None:
+    profile = load_profile()
+    print("\nGenerating curriculum — please wait...")
+    nodes = generate_curriculum(profile)
+    for node in nodes:
+        save_node(node["node_id"], node)
+    print(f"Curriculum saved: {len(nodes)} nodes written to learning_progress.json")
+    for node in nodes:
+        prereqs = ", ".join(node["prerequisites"]) or "none"
+        print(f"  [{node['status']:8}] {node['node_id']} — {node['title']} (prereqs: {prereqs})")
+
+
 if __name__ == "__main__":
     initialize_storage()
     run_onboarding()
+    run_curriculum_generation()
