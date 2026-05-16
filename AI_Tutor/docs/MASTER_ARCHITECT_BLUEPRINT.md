@@ -1,4 +1,4 @@
-# 📜 MASTER_ARCHITECT_BLUEPRINT.md (v1.6)
+# 📜 MASTER_ARCHITECT_BLUEPRINT.md (v1.7)
 
 ## 1. Master System Overview
 
@@ -123,3 +123,111 @@ When generating or modifying code, adhere strictly to this functional allocation
 | `src/agents.py` | Initializing LLM clients; executing prompts; handling retry logic. | Direct file saving (`open()`, `json.dump()`); terminal menus. |
 | `src/utils.py` | JSON loading/saving; data schema validation; system paths. | Importing LLM SDKs; running prompts; handling runtime logic. |
 | `src/main.py` | Managing the state loop; print statements; routing the menu logic. | Complex JSON mutations; direct API handling. |
+---
+
+## 8. Data Architecture & State Management (Stress-Test Additions)
+
+*This section was added after architectural review to close gaps identified in the v1.6 spec before code generation begins.*
+
+---
+
+### 8.1 Canonical Node Schema
+
+Every lesson node in the DAG must conform to this exact structure when stored in `learning_progress.json`. No code may write a node object that omits required fields.
+
+```json
+{
+  "node_id": "string (e.g., 'api_basics_01')",
+  "title": "string",
+  "prerequisites": ["node_id", "node_id"],
+  "status": "locked | unlocked | conditionally_skipped | mastered | force_locked",
+  "friction_cycle_count": 0,
+  "consecutive_failures": 0,
+  "attempts": 0,
+  "success_rate": 0.0,
+  "active_interest_used": "string (the interest selected for this node's analogy)",
+  "last_updated": "ISO 8601 timestamp"
+}
+```
+
+**Where it lives:** `learning_progress.json` under a top-level `nodes` key, indexed by `node_id`.
+**Who writes it:** Only `src/utils.py` via a dedicated `save_node()` function. No other file may mutate node objects directly.
+
+---
+
+### 8.2 Legal Node State Transitions (State Machine)
+
+Not all status changes are valid. The Orchestrator in `main.py` must reject any transition not listed here. This prevents the race condition between the Micro-Gate promotion logic (Section 5.2) and the Circuit Breaker regression logic (Section 4.1).
+
+| From Status | Legal Transitions To | Triggered By |
+| :--- | :--- | :--- |
+| `locked` | `unlocked` | Prerequisite node reaches `mastered` |
+| `unlocked` | `conditionally_skipped`, `mastered`, `force_locked` | Diagnostic pass, assessment pass, Circuit Breaker |
+| `conditionally_skipped` | `mastered`, `unlocked` | Micro-Gate pass, Micro-Gate fail |
+| `mastered` | `unlocked` | Circuit Breaker regression only |
+| `force_locked` | `unlocked` | Manual instructor override OR node split complete |
+
+**Priority Rule:** If two subsystems attempt conflicting transitions simultaneously, the Circuit Breaker (Section 4.1) always wins. A `force_locked` status cannot be overridden by Micro-Gate logic.
+
+---
+
+### 8.3 Turn Buffer Management (Clarifying Section 4.2 vs. Section 7)
+
+Section 4.2 defines a 5-turn truncation and 3-turn payload window. Section 7.1 assigns state loop management to `main.py` but forbids complex JSON mutation there. This section resolves that conflict explicitly.
+
+**Rule:** `src/utils.py` owns the turn buffer via two functions:
+
+```python
+def append_turn(role: str, content: str) -> None:
+    """Appends a turn to last_3_turns, evicts oldest if buffer exceeds 3."""
+
+def increment_turn_count() -> bool:
+    """Increments session_turn_count. Returns True if truncation threshold (5) is reached."""
+```
+
+`src/main.py` calls these functions after every exchange. It does not manipulate the buffer array directly.
+
+---
+
+### 8.4 Contextual Anchor Fallback Protocol (Closing the No-Match Gap)
+
+Section 4.3 defines behavior when a primary interest produces a weak analogy, but does not define what happens if all 5 interests fail to map to a node.
+
+**Fallback Chain (executed in order):**
+
+1. Attempt primary interest analogy.
+2. If weak, query Dynamic Profiler for alternatives per Section 4.3 Rule 1.
+3. If all 5 interests are exhausted without a valid mapping, the Contextual Anchor switches to **Neutral Mode**: deliver the concept using plain language with no domain analogy, and log the node ID to a `no_analogy_nodes` list in `student_profile.json`.
+4. After the session, prompt the user: *"I had trouble finding a good analogy for [Node Title] using your current interests. Would you like to add a new interest that might help with topics like this?"*
+
+This ensures the lesson always delivers rather than stalling, while surfacing the gap for the user to address.
+
+---
+
+### 8.5 Updated `learning_progress.json` Full Schema
+
+```json
+{
+  "current_node_id": null,
+  "nodes": {},
+  "friction_cycle_count": 0,
+  "session_turn_count": 0,
+  "last_3_turns": [
+    { "role": "user | assistant", "content": "string" }
+  ]
+}
+```
+
+### 8.6 Updated `student_profile.json` Full Schema
+
+```json
+{
+  "student_name": "",
+  "target_subject": "",
+  "generational_bracket": "",
+  "core_interests": [],
+  "preferred_delivery": "",
+  "custom_mental_models": [],
+  "no_analogy_nodes": []
+}
+```
