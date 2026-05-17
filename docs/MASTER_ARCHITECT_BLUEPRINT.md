@@ -242,3 +242,18 @@ This ensures the lesson always delivers rather than stalling, while surfacing th
   1. **Data Isolation:** Remediation state must live inside a temporary, optional `"remediation": {}` tracking block within the existing node record. It must NOT alter the canonical 9-field schema framework.
   2. **Circuit Breaker:** Max 1 attempt for micro-remediation modules to prevent recursive execution loops.
   3. **No Retroactive Locks:** Failing a micro-remediation module cannot revoke a previously granted `mastered` status or re-lock downstream nodes.
+  ## Recent Architecture Decisions & Changelog (May 2026)
+
+### 1. ADR-001: Micro-Remediation Loop Implementation
+* **Decision:** Implemented a 1-attempt maximum remediation loop isolated from the core lesson track.
+* **Impact:** `utils.py` now allows an optional `"remediation": {}` block pass-through within the 9-field canonical schema. `main.py` evaluates and runs remediation *after* a node is marked `mastered`, ensuring failed remediation cannot retroactively lock or corrupt the DAG.
+
+### 2. Dynamic Context Decoupling
+* **Decision:** Decoupled historic state (`learning_progress.json`) from user preference context (`student_profile.json`).
+* **Impact:** Allowed `student_profile.json` to be fully mutable. The instruction engine reads this file freshly at the start of every lesson generation, allowing real-time shifts in instructional analogies (e.g., switching from Ramen to Youth Basketball) mid-course without destroying learning history.
+### 3. Phase 2 Architecture: Streamlit Dashboard Wrapper
+* **Decision:** Introduce `app.py` as a 100% Python-driven browser presentation layer, preserving strict component isolation.
+* **Impact:** 
+  - `utils.py`, `agents.py`, and `main.py` remain the isolated core engine.
+  - `app.py` will handle UI rendering, custom flat 2D CSS styling, and user interaction.
+  - Application state transitions from a linear terminal `input()` loop to an event-driven loop managed via `st.session_state`.

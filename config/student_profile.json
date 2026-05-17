@@ -1,12 +1,13 @@
 {
   "student_name": "Nathan",
-  "target_subject": "Web APIs",
-  "generational_bracket": "Millennial (born 1981\u20131996)",
+  "target_subject": "",
+  "generational_bracket": "Gen Z (born 1997\u20132012)",
   "core_interests": [
-    "basketball",
-    "cooking",
-    "film"
+    "Movies",
+    "Basketball",
+    "Evangelical Christianity"
   ],
-  "preferred_delivery": "Interactive Dialog",
-  "custom_mental_models": []
+  "preferred_delivery": "Example-Driven",
+  "custom_mental_models": [],
+  "no_analogy_nodes": []
 }

@@ -41,13 +41,13 @@
       "prerequisites": [
         "http_fundamentals"
       ],
-      "status": "unlocked",
+      "status": "mastered",
       "friction_cycle_count": 0,
       "consecutive_failures": 0,
-      "attempts": 0,
+      "attempts": 1,
       "success_rate": 0.0,
-      "active_interest_used": null,
-      "last_updated": "2026-05-16T22:09:01.018453Z"
+      "active_interest_used": "Evangelical Christianity",
+      "last_updated": "2026-05-17T03:50:17.837126Z"
     },
     "restful_api_principles": {
       "node_id": "restful_api_principles",
@@ -55,13 +55,13 @@
       "prerequisites": [
         "understanding_web_apis"
       ],
-      "status": "locked",
+      "status": "unlocked",
       "friction_cycle_count": 0,
       "consecutive_failures": 0,
       "attempts": 0,
       "success_rate": 0.0,
       "active_interest_used": null,
-      "last_updated": "2026-05-16T21:39:37.206595Z"
+      "last_updated": "2026-05-17T03:50:17.912517Z"
     },
     "api_endpoints_and_request_structure": {
       "node_id": "api_endpoints_and_request_structure",

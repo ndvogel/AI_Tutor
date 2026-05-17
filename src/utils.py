@@ -46,6 +46,27 @@ def save_profile(data: Dict[str, Any]) -> None:
         json.dump(data, f, indent=2)
 
 
+def update_student_profile(updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Merges updates into the student profile, saves, and returns the result.
+    Initializes a canonical blank profile if the file is missing."""
+    os.makedirs("config", exist_ok=True)
+    try:
+        profile = load_profile()
+    except FileNotFoundError:
+        profile = {
+            "student_name": "",
+            "target_subject": "",
+            "generational_bracket": "",
+            "core_interests": [],
+            "preferred_delivery": "",
+            "custom_mental_models": [],
+            "no_analogy_nodes": [],
+        }
+    profile.update(updates)
+    save_profile(profile)
+    return profile
+
+
 def load_progress() -> Dict[str, Any]:
     """Reads and returns the learning progress."""
     with open(PROGRESS_PATH, "r", encoding="utf-8") as f:

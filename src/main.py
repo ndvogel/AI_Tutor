@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import initialize_storage, load_profile, save_profile, save_node, load_progress, unlock_dependents, save_remediation
+from utils import initialize_storage, load_profile, save_profile, save_node, load_progress, unlock_dependents, save_remediation, update_student_profile
 from agents import generate_curriculum, generate_lesson, evaluate_answers, generate_remediation
 
 GENERATIONAL_OPTIONS = [
@@ -91,6 +91,51 @@ def run_curriculum_generation() -> None:
     for node in nodes:
         prereqs = ", ".join(node["prerequisites"]) or "none"
         print(f"  [{node['status']:8}] {node['node_id']} — {node['title']} (prereqs: {prereqs})")
+
+
+def change_profile_context() -> None:
+    while True:
+        profile = load_profile()
+        print("\n=== Update Profile Context ===")
+        print(f"  Delivery style : {profile.get('preferred_delivery', '(none)')}")
+        interests = profile.get("core_interests", [])
+        print(f"  Interests ({len(interests)}/5): {', '.join(interests) or '(none)'}")
+
+        action = _prompt_choice(
+            "What would you like to update?",
+            ["Change delivery style", "Add an interest", "Remove an interest", "Back"],
+        )
+
+        if action == "Back":
+            break
+
+        elif action == "Change delivery style":
+            new_delivery = _prompt_choice("Choose your new delivery style:", DELIVERY_OPTIONS)
+            updated = update_student_profile({"preferred_delivery": new_delivery})
+            print(f"  Saved. Delivery style is now: {updated['preferred_delivery']}")
+
+        elif action == "Add an interest":
+            if len(interests) >= 5:
+                print("  You already have 5 interests (the maximum). Remove one first.")
+            else:
+                entry = input("  New interest: ").strip()
+                if not entry:
+                    print("  Nothing entered — no change made.")
+                elif entry in interests:
+                    print(f"  '{entry}' is already in your interests.")
+                else:
+                    updated = update_student_profile({"core_interests": interests + [entry]})
+                    print(f"  Saved. Interests: {', '.join(updated['core_interests'])}")
+
+        elif action == "Remove an interest":
+            if not interests:
+                print("  No interests to remove.")
+            else:
+                to_remove = _prompt_choice("Which interest to remove?", interests)
+                updated_interests = [i for i in interests if i != to_remove]
+                updated = update_student_profile({"core_interests": updated_interests})
+                remaining = ", ".join(updated["core_interests"]) or "(none)"
+                print(f"  '{to_remove}' removed. Remaining: {remaining}")
 
 
 def run_remediation(node_id: str, node_data: dict, missed_topic: str, interest_used: str) -> None:
@@ -196,6 +241,7 @@ if __name__ == "__main__":
     print("\n=== AI Tutor — Dev Menu ===")
     print("  1. Onboarding + Curriculum Generation")
     print("  2. Run Lesson  (first unlocked node)")
+    print("  3. Update Profile Context")
     choice = input("Select option: ").strip()
 
     if choice == "1":
@@ -210,5 +256,7 @@ if __name__ == "__main__":
             print("No unlocked nodes found. Run option 1 first.")
         else:
             run_lesson(unlocked[0])
+    elif choice == "3":
+        change_profile_context()
     else:
         print("Invalid choice.")
