@@ -235,6 +235,20 @@ def run_lesson(node_id: str) -> None:
         print(f"  Attempts: {node_data['attempts']}  |  Consecutive misses: {node_data['consecutive_failures']}")
 
 
+def view_progress() -> None:
+    """Prints every curriculum node's title and status from learning_progress.json."""
+    progress = load_progress()
+    nodes = progress["nodes"]
+    if not nodes:
+        print("No curriculum nodes found. Run option 1 first.")
+        return
+    print("\n=== Curriculum Progress ===")
+    for node_id, node in nodes.items():
+        title = node.get("title", "Unknown Concept")
+        status = node.get("status", "unknown")
+        print(f"  [{status:8}] {node_id} — {title}")
+
+
 if __name__ == "__main__":
     initialize_storage()
 
@@ -242,6 +256,7 @@ if __name__ == "__main__":
     print("  1. Onboarding + Curriculum Generation")
     print("  2. Run Lesson  (first unlocked node)")
     print("  3. Update Profile Context")
+    print("  4. View Progress")
     choice = input("Select option: ").strip()
 
     if choice == "1":
@@ -258,5 +273,7 @@ if __name__ == "__main__":
             run_lesson(unlocked[0])
     elif choice == "3":
         change_profile_context()
+    elif choice == "4":
+        view_progress()
     else:
         print("Invalid choice.")
