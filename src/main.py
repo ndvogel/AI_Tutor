@@ -4,7 +4,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from utils import initialize_storage, load_profile, save_profile, save_node, load_progress, unlock_dependents, save_remediation, update_student_profile
+from utils import initialize_storage, load_profile, save_profile, save_node, load_progress, unlock_dependents, save_remediation, update_student_profile, load_safe
 from agents import generate_curriculum, generate_lesson, evaluate_answers, generate_remediation
 
 GENERATIONAL_OPTIONS = [
@@ -21,6 +21,20 @@ DELIVERY_OPTIONS = [
     "Socratic Method",
     "Example-Driven",
 ]
+
+# Shown when a menu option that reads existing profile/progress data finds
+# that storage is missing or corrupt (e.g. deleted or damaged mid-session).
+STORAGE_UNINITIALIZED_MSG = (
+    "Storage not initialized. Please run option 1 (Onboarding) first."
+)
+
+# Shown when onboarding/curriculum generation themselves can't read storage
+# (initialize_storage() normally guarantees this won't happen, but the file
+# could still be deleted or corrupted mid-session).
+STORAGE_UNREADABLE_MSG = (
+    "Storage not initialized or corrupted. Please restart the app to "
+    "reinitialize storage."
+)
 
 
 def _prompt_choice(prompt: str, options: list) -> str:
@@ -66,7 +80,10 @@ def run_onboarding() -> None:
             break
         interests.append(entry)
 
-    profile = load_profile()
+    profile = load_safe(load_profile)
+    if profile is None:
+        print(STORAGE_UNREADABLE_MSG)
+        return
     profile["student_name"] = name
     profile["target_subject"] = subject
     profile["generational_bracket"] = generation
@@ -82,7 +99,10 @@ def run_onboarding() -> None:
 
 
 def run_curriculum_generation() -> None:
-    profile = load_profile()
+    profile = load_safe(load_profile)
+    if profile is None:
+        print(STORAGE_UNREADABLE_MSG)
+        return
     print("\nGenerating curriculum — please wait...")
     nodes = generate_curriculum(profile)
     for node in nodes:
@@ -95,7 +115,10 @@ def run_curriculum_generation() -> None:
 
 def change_profile_context() -> None:
     while True:
-        profile = load_profile()
+        profile = load_safe(load_profile)
+        if profile is None:
+            print(STORAGE_UNINITIALIZED_MSG)
+            return
         print("\n=== Update Profile Context ===")
         print(f"  Delivery style : {profile.get('preferred_delivery', '(none)')}")
         interests = profile.get("core_interests", [])
@@ -160,8 +183,11 @@ def run_remediation(node_id: str, node_data: dict, missed_topic: str, interest_u
 
 
 def run_lesson(node_id: str) -> None:
-    profile = load_profile()
-    progress = load_progress()
+    profile = load_safe(load_profile)
+    progress = load_safe(load_progress)
+    if profile is None or progress is None:
+        print(STORAGE_UNINITIALIZED_MSG)
+        return
 
     node_data = progress["nodes"].get(node_id)
     if not node_data:
@@ -237,7 +263,10 @@ def run_lesson(node_id: str) -> None:
 
 def view_progress() -> None:
     """Prints every curriculum node's title and status from learning_progress.json."""
-    progress = load_progress()
+    progress = load_safe(load_progress)
+    if progress is None:
+        print(STORAGE_UNINITIALIZED_MSG)
+        return
     nodes = progress["nodes"]
     if not nodes:
         print("No curriculum nodes found. Run option 1 first.")
@@ -263,14 +292,17 @@ if __name__ == "__main__":
         run_onboarding()
         run_curriculum_generation()
     elif choice == "2":
-        progress = load_progress()
-        unlocked = [
-            nid for nid, n in progress["nodes"].items() if n["status"] == "unlocked"
-        ]
-        if not unlocked:
-            print("No unlocked nodes found. Run option 1 first.")
+        progress = load_safe(load_progress)
+        if progress is None:
+            print(STORAGE_UNINITIALIZED_MSG)
         else:
-            run_lesson(unlocked[0])
+            unlocked = [
+                nid for nid, n in progress["nodes"].items() if n["status"] == "unlocked"
+            ]
+            if not unlocked:
+                print("No unlocked nodes found. Run option 1 first.")
+            else:
+                run_lesson(unlocked[0])
     elif choice == "3":
         change_profile_context()
     elif choice == "4":

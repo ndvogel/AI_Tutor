@@ -3,7 +3,7 @@
 import os
 import json
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Callable, Dict, Any, List, Optional
 
 PROFILE_PATH = os.path.join("config", "student_profile.json")
 PROGRESS_PATH = os.path.join("config", "learning_progress.json")
@@ -32,6 +32,22 @@ def initialize_storage() -> None:
             "session_turn_count": 0,
             "last_3_turns": []
         })
+
+
+def load_safe(loader: Callable[[], Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Calls a storage loader (e.g. load_profile, load_progress) and returns
+    None instead of raising when the backing file is missing or corrupt.
+
+    Follows the same fallback philosophy as update_student_profile(): give
+    callers a clean 'not initialized' signal rather than an uncaught
+    FileNotFoundError/json.JSONDecodeError, while leaving load_profile()/
+    load_progress() themselves raising as before for callers that rely on
+    that behavior.
+    """
+    try:
+        return loader()
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
 
 
 def load_profile() -> Dict[str, Any]:

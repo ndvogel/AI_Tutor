@@ -233,30 +233,40 @@ def test_view_progress_raises_when_a_node_value_is_not_a_dict(monkeypatch):
         main.view_progress()
 
 
-def test_view_progress_propagates_filenotfounderror_when_storage_uninitialized(monkeypatch):
-    """Sequencing bug: if initialize_storage() was never run and
-    learning_progress.json doesn't exist, load_progress() raises
-    FileNotFoundError. view_progress() has no try/except, so the error
-    should propagate rather than being masked as 'no nodes found'."""
+def test_view_progress_prints_graceful_message_when_storage_uninitialized(monkeypatch, capsys):
+    """Sequencing bug guard: if initialize_storage() was never run (or the
+    file was deleted/became unreadable mid-session) and learning_progress.json
+    doesn't exist, load_progress() raises FileNotFoundError. view_progress()
+    now routes the load through utils.load_safe(), which catches that and
+    returns None, so view_progress() should print a clear guidance message
+    and return normally instead of letting the exception propagate."""
 
     def _raise_missing_file():
         raise FileNotFoundError("learning_progress.json not found")
 
     monkeypatch.setattr(main, "load_progress", _raise_missing_file)
 
-    with pytest.raises(FileNotFoundError):
-        main.view_progress()
+    main.view_progress()
+
+    out = capsys.readouterr().out
+    assert out.strip() == "Storage not initialized. Please run option 1 (Onboarding) first."
+    assert "=== Curriculum Progress ===" not in out
 
 
-def test_view_progress_propagates_json_decode_error_on_corrupt_storage_file(monkeypatch):
+def test_view_progress_prints_graceful_message_when_storage_corrupt(monkeypatch, capsys):
     """If learning_progress.json exists but contains invalid JSON,
-    load_progress() (via json.load) raises json.JSONDecodeError. That should
-    propagate out of view_progress() unmodified."""
+    load_progress() (via json.load) raises json.JSONDecodeError. view_progress()
+    now routes the load through utils.load_safe(), which catches that and
+    returns None, so view_progress() should print a clear guidance message
+    and return normally instead of letting the exception propagate."""
 
     def _raise_bad_json():
         raise json.JSONDecodeError("Expecting value", doc="", pos=0)
 
     monkeypatch.setattr(main, "load_progress", _raise_bad_json)
 
-    with pytest.raises(json.JSONDecodeError):
-        main.view_progress()
+    main.view_progress()
+
+    out = capsys.readouterr().out
+    assert out.strip() == "Storage not initialized. Please run option 1 (Onboarding) first."
+    assert "=== Curriculum Progress ===" not in out
